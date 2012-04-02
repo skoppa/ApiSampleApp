@@ -48,6 +48,8 @@ namespace ApiSampleApp.Controllers
 				var request = WebRequest.Create(actionuri);
 				request.ContentType = "application/json";
 				var response = (HttpWebResponse)request.GetResponse();
+				string scope = null;
+					
 
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
@@ -67,6 +69,8 @@ namespace ApiSampleApp.Controllers
 							System.Web.Caching.Cache.NoAbsoluteExpiration,
 							TimeSpan.FromDays(1), System.Web.Caching.CacheItemPriority.Normal, null);
 
+						// TODO: initialize scope
+
 						ViewBag.Message = string.Format("Got a dictionary with the following keys: {0}", string.Join(",", dict.Keys));
 					}
 					// do we have an authorization code for this user yet? If not, we need to get it
@@ -76,6 +80,10 @@ namespace ApiSampleApp.Controllers
 						ConfigurationManager.AppSettings["MyClientId"],
 						ConfigurationManager.AppSettings["MyWebRedirectUri"]
 						);
+					if (scope != null)
+					{
+						oauthUrl += "&scope=" + scope;
+					}
 					return Redirect(oauthUrl);
 				}
 			}
@@ -98,7 +106,8 @@ namespace ApiSampleApp.Controllers
 						ConfigurationManager.AppSettings["MyClientSecret"]
 						);
 			var request = WebRequest.Create(oauthUri);
-			request.ContentType = "application/json";
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.Method = "POST";
 			var response = (HttpWebResponse)request.GetResponse();
 
 			if (response.StatusCode != HttpStatusCode.OK)
