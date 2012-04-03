@@ -7,6 +7,7 @@ using System.Web.Script.Serialization;
 using System.Net;
 using System.IO;
 using System.Configuration;
+using ApiSampleApp.Models;
 
 namespace ApiSampleApp.Controllers
 {
@@ -72,33 +73,31 @@ namespace ApiSampleApp.Controllers
 				{
 					using (var stm = new StreamReader(response.GetResponseStream()))
 					{
-						var data = stm.ReadToEnd();
-						var json = new JavaScriptSerializer() { MaxJsonLength = int.MaxValue };
-						var dict = (IDictionary<string, object>)json.DeserializeObject(data);
+						dynamic dict = DeserializeResponse(stm);
+						var userId = dict["ApplicationAction"]["User"]["Id"] as string;
 
-						// store in local DB so that after the authentication, we can retrieve the request info
-						// for this demo, just put it in the in-memory cache
-						// TODO: extract the request key
-						HttpRuntime.Cache.Add("my_request", dict, null,
-							System.Web.Caching.Cache.NoAbsoluteExpiration,
-							TimeSpan.FromDays(1), System.Web.Caching.CacheItemPriority.Normal, null);
+						var stateInfo = GetUserStateInfo(userId);
+						// do we have an authorization code for this user yet? If not, we need to get it
+						// redirect the browser
+						if (string.IsNullOrEmpty(stateInfo.AuthToken))
+						{
+							// TODO: initialize scope
+							var stateId = stateInfo.AddStateInfo(dict);
+							var oauthUrl = string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code&state={3}",
+								ConfigurationManager.AppSettings["OauthUri"],
+								ConfigurationManager.AppSettings["MyClientId"],
+								ConfigurationManager.AppSettings["MyRedirectUri"],
+								userId + ":" + stateId
+								);
+							if (scope != null)
+							{
+								oauthUrl += "&scope=" + scope;
+							}
 
-						// TODO: initialize scope
-
-						ViewBag.Message = string.Format("Got a dictionary with the following keys: {0}", string.Join(",", dict.Keys));
+							return Redirect(oauthUrl);
+						}
+						return MainApplicationHandler(stateInfo, dict);
 					}
-					// do we have an authorization code for this user yet? If not, we need to get it
-					// redirect the browser
-					var oauthUrl = string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code",
-						ConfigurationManager.AppSettings["OauthUri"],
-						ConfigurationManager.AppSettings["MyClientId"],
-						ConfigurationManager.AppSettings["MyRedirectUri"]
-						);
-					if (scope != null)
-					{
-						oauthUrl += "&scope=" + scope;
-					}
-					return Redirect(oauthUrl);
 				}
 			}
 			catch (Exception e)
@@ -107,6 +106,43 @@ namespace ApiSampleApp.Controllers
 			}
 
 			return View("ShowRawText");
+		}
+
+		private static dynamic DeserializeResponse(StreamReader stm)
+		{
+			var data = stm.ReadToEnd();
+			var json = new JavaScriptSerializer() { MaxJsonLength = int.MaxValue };
+			dynamic dict = json.DeserializeObject(data);
+			return dict;
+		}
+
+		UserStateInfo GetUserStateInfo(string userId)
+		{
+			Dictionary<string, UserStateInfo> stateCache;
+			lock (typeof(HomeController))
+			{
+				stateCache = HttpRuntime.Cache.Get("user_cache") as Dictionary<string, UserStateInfo>;
+				if (stateCache == null)
+				{
+					stateCache = new Dictionary<string, UserStateInfo>();
+
+					HttpRuntime.Cache.Add("user_cache", stateCache, null,
+							System.Web.Caching.Cache.NoAbsoluteExpiration,
+							System.Web.Caching.Cache.NoSlidingExpiration, System.Web.Caching.CacheItemPriority.Normal, null);
+				}
+			}
+			lock (stateCache)
+			{
+				if (!stateCache.ContainsKey(userId))
+					stateCache[userId] = new UserStateInfo();
+				return stateCache[userId];
+			}
+		}
+
+		ActionResult MainApplicationHandler(UserStateInfo stateInfo, dynamic activationInfo)
+		{
+			var model = new BasespaceActionInfo(activationInfo);
+			return View("DisplayBasespaceData", model);
 		}
 
 		public ActionResult HandleAuthApproved(string state, string code)
@@ -120,41 +156,32 @@ namespace ApiSampleApp.Controllers
 				{"code", code },
 				{"client_secret", ConfigurationManager.AppSettings["MyClientSecret"] }
 			};
-			var json = new JavaScriptSerializer() { MaxJsonLength = int.MaxValue };
-			var data = json.Serialize(payload);
 			var oauthUri = ConfigurationManager.AppSettings["OauthTokenUri"];
-			var request = WebRequest.Create(oauthUri);
-			request.ContentType = "application/json";
-			request.Accept = "application/json";
-			request.ContentLength = data.Length;
+			var args = from kvp in payload select kvp.Key + "=" + kvp.Value;
+			var request = WebRequest.Create(oauthUri + "?" + string.Join("&", args));
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.ContentLength = 0;
 			request.Method = "POST";
-			using (var streamWriter = new StreamWriter(request.GetRequestStream()))
-			{
-				streamWriter.Write(data);
-			}
 			var response = (HttpWebResponse)request.GetResponse();
 
 			if (response.StatusCode != HttpStatusCode.OK)
 			{
 				ViewBag.Message = string.Format("Error fetching authorization code from '{0}'", oauthUri);
+				return View("ShowRawText");
 			}
-			else
+			using (var stm = new StreamReader(response.GetResponseStream()))
 			{
-				using (var stm = new StreamReader(response.GetResponseStream()))
-				{
-					data = stm.ReadToEnd();
-					var dict = (IDictionary<string, object>)json.DeserializeObject(data);
+				dynamic dict = DeserializeResponse(stm);
 
-					// store in local DB so that after the authentication, we can retrieve the request info
-					// for this demo, just put it in the in-memory cache
-					HttpRuntime.Cache.Add("my_authcode", dict, null,
-						System.Web.Caching.Cache.NoAbsoluteExpiration,
-						TimeSpan.FromDays(1), System.Web.Caching.CacheItemPriority.Normal, null);
+				var user = state.Split(':')[0];
+				var stateId = state.Split(':')[1];
+				var stateInfo = GetUserStateInfo(user);
 
-					ViewBag.Message = string.Format("Got a dictionary with the following keys: {0}", string.Join(",", dict.Keys));
-				}
+				stateInfo.AuthToken = dict["access_token"] as string;
+
+				var context = stateInfo.GetAndDeleteStateInfo(stateId);
+				return MainApplicationHandler(stateInfo, context);
 			}
-			return View("ShowRawText");
 		}
 	}
 }
