@@ -27,7 +27,7 @@
 }
 
 function fetchResource(event, userId) {
-	var url = location.protocol + '//' + location.hostname + ':' + location.port + '/Home/ListFileResources?userId=' + userId + '&resource=' + $(event.target).text();
+	var url = location.protocol + '//' + location.hostname + ':' + location.port + '/Home/FetchResource?userId=' + userId + '&resource=' + $(event.target).text();
 
 	$.getJSON(url, function(data) {
 		$('#results').html(toHtml(data, '', '&nbsp&nbsp'));

@@ -2,8 +2,81 @@
     ViewBag.Title = "Home Page";
 }
 @model ApiSampleApp.Models.BasespaceActionInfo
+<script type="text/javascript">
+	$(document).ready(function () {
+		$('a.resource').click(function (e) { 
+			fetchResource(e, @Model.UserId); 
+		});
+	});
+</script>
 
-<h2>@Model.UserId</h2>
-<p>
-    
-</p>
+<div>UserId: @Model.UserId</div>
+@if (Model.Samples != null)
+{
+	<div>Samples: </div>
+	<div>
+	<table>
+	<thead>
+	<tr>
+	<td>Name</td>
+	<td>Files</td>
+	</tr>
+	</thead>
+	<tbody>
+	@foreach (var sample in Model.Samples)
+	{
+	 <td>@sample.Name</td>
+	 <td><a href="#" class="resource">@sample.HrefFiles</a></td>
+	}
+	</tbody>
+	</table>
+	</div>
+}
+@if (Model.Projects != null)
+{
+	<div>Projects: </div>
+	<div>
+	<table>
+	<thead>
+	<tr>
+	<td>Name</td>
+	<td>Samples</td>
+	<td>Analyses</td>
+	</tr>
+	</thead>
+	<tbody>
+	@foreach (var project in Model.Projects)
+	{
+	 <td>@project.Name</td>
+	 <td><a href="#" class="resource">@project.HrefSamples</a></td>
+	 <td><a href="#" class="resource">@project.HrefAnalyses</a></td>
+	}
+	</tbody>
+	</table>
+	</div>
+}
+@if (Model.Analyses != null)
+{
+	<div>Analyses: </div>
+	<div>
+	<table>
+	<thead>
+	<tr>
+	<td>Name</td>
+	<td>Description</td>
+	<td>Results</td>
+	</tr>
+	</thead>
+	<tbody>
+	@foreach (var analysis in Model.Analyses)
+	{
+	 <td>@analysis.Name</td>
+	 <td>@analysis.Description</td>
+	 <td><a href="#" class="resource">@analysis.HrefResults</a></td>
+	}
+	</tbody>
+	</table>
+	</div>
+}
+<div>Results: </div>
+<div id="results">No results</div>

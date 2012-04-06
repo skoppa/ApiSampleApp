@@ -5,6 +5,11 @@ using System.Web;
 
 namespace ApiSampleApp.Models
 {
+	/// <summary>
+	/// This is a simple set of classes to map the incoming JSON to .NET objects. 
+	/// Depending on your application and programming language, there are probably
+	/// several REST API class libraries you can use to make this easier.
+	/// </summary>
 	public class BasespaceActionInfo
 	{
 		public string UserId { get; set; }
