@@ -101,7 +101,7 @@ namespace ApiSampleApp.Controllers
 					using (var stm = new StreamReader(response.GetResponseStream()))
 					{
 						dynamic dict = DeserializeResponse(stm);
-						var userId = dict["ApplicationAction"]["User"]["Id"] as string;
+						var userId = dict["Response"]["User"]["Id"] as string;
 
 						var stateInfo = GetUserStateInfo(userId);
 						// do we have an authorization code for this user yet? If not, we need to get it

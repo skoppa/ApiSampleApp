@@ -19,7 +19,7 @@ namespace ApiSampleApp.Models
 
 		public BasespaceActionInfo(dynamic actionDictionary)
 		{
-			var actionInfo = actionDictionary["ApplicationAction"];
+			var actionInfo = actionDictionary["Response"];
 			UserId = actionInfo["User"]["Id"] as string;
 
 			if (actionInfo.ContainsKey("Samples"))
