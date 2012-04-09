@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using ApiSampleApp.Models;
 
 namespace ApiSampleApp
 {
@@ -9,24 +10,24 @@ namespace ApiSampleApp
 	{
 		public string AuthToken { get; set; }
 		public DateTime Expires { get; set; }
-		
-		Dictionary<string, object> _stateCache;
+
+		Dictionary<string, BasespaceActionInfo> _stateCache;
 
 		public UserStateInfo()
 		{
-			_stateCache = new Dictionary<string, object>();
+			_stateCache = new Dictionary<string, BasespaceActionInfo>();
 		}
 
-		public string AddStateInfo(object info)
+		public string AddStateInfo(BasespaceActionInfo info)
 		{
 			var key = Guid.NewGuid().ToString();
 			_stateCache[key] = info;
 			return key;
 		}
 
-		public object GetAndDeleteStateInfo(string key)
+		public BasespaceActionInfo GetAndDeleteStateInfo(string key)
 		{
-			object result;
+			BasespaceActionInfo result;
 			if (!_stateCache.TryGetValue(key, out result))
 				return null;
 			_stateCache.Remove(key);

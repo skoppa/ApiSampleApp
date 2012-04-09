@@ -89,7 +89,6 @@ namespace ApiSampleApp.Controllers
 				SetBasicAuthHeader(request, ConfigurationManager.AppSettings["MyClientId"],
 					ConfigurationManager.AppSettings["MyClientSecret"]);
 				var response = (HttpWebResponse)request.GetResponse();
-				string scope = null;
 					
 
 				if (response.StatusCode != HttpStatusCode.OK)
@@ -101,29 +100,27 @@ namespace ApiSampleApp.Controllers
 					using (var stm = new StreamReader(response.GetResponseStream()))
 					{
 						dynamic dict = DeserializeResponse(stm);
-						var userId = dict["Response"]["User"]["Id"] as string;
+						var model = new BasespaceActionInfo(dict);
+
+						var userId = model.UserId;
 
 						var stateInfo = GetUserStateInfo(userId);
 						// do we have an authorization code for this user yet? If not, we need to get it
 						// redirect the browser
 						if (string.IsNullOrEmpty(stateInfo.AuthToken))
 						{
-							// TODO: initialize scope
-							var stateId = stateInfo.AddStateInfo(dict);
-							var oauthUrl = string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code&state={3}",
+							var stateId = stateInfo.AddStateInfo(model);
+							var oauthUrl = string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code&state={3}&scope={4}",
 								ConfigurationManager.AppSettings["OauthUri"],
 								ConfigurationManager.AppSettings["MyClientId"],
 								ConfigurationManager.AppSettings["MyRedirectUri"],
-								userId + ":" + stateId
+								userId + ":" + stateId,
+								model.GetRequestedScope()
 								);
-							if (scope != null)
-							{
-								oauthUrl += "&scope=" + scope;
-							}
-
+							
 							return Redirect(oauthUrl);
 						}
-						return MainApplicationHandler(stateInfo, dict);
+						return MainApplicationHandler(stateInfo, model);
 					}
 				}
 			}
@@ -204,9 +201,8 @@ namespace ApiSampleApp.Controllers
 		/// <summary>
 		/// This method drives the population of the web page from the stored data
 		/// </summary>
-		ActionResult MainApplicationHandler(UserStateInfo stateInfo, dynamic activationInfo)
+		ActionResult MainApplicationHandler(UserStateInfo stateInfo, BasespaceActionInfo model)
 		{
-			var model = new BasespaceActionInfo(activationInfo);
 			return View("DisplayBasespaceData", model);
 		}
 

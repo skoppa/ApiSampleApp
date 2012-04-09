@@ -57,6 +57,18 @@ namespace ApiSampleApp.Models
 			}
 			return result;
 		}
+
+		internal string GetRequestedScope()
+		{
+			List<string> needed = new List<string>();
+			if (Analyses != null)
+				needed.AddRange(from a in Analyses select "read analysis " + a.Id);
+			if (Samples != null)
+				needed.AddRange(from s in Samples select "read sample " + s.Id);
+			if (Projects != null)
+				needed.AddRange(from p in Projects select "read project " + p.Id);
+			return string.Join(",", needed);
+		}
 	}
 	
 	public class BasespaceUser
