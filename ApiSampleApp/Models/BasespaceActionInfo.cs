@@ -103,8 +103,8 @@ namespace ApiSampleApp.Models
 		public string Id { get; set; }
 		public string Href { get; set; }
 		public string Name { get; set; }
-		public Uri HrefSamples { get; set; }
-		public Uri HrefAnalyses { get; set; }
+		public string HrefSamples { get; set; }
+		public string HrefAnalyses { get; set; }
 	}
 
 
