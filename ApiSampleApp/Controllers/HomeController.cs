@@ -51,7 +51,7 @@ namespace ApiSampleApp.Controllers
 		public ActionResult Trigger(string action, string actionuri, string returnuri,
 			string error, string error_description, string state, string code)
 		{
-			if (null != actionuri)
+			if (actionuri != null)
 				return HandleInitialTrigger(actionuri, returnuri);
 			else if (error != null)
 				return HandleAuthFailed(error, error_description);
