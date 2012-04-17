@@ -2,7 +2,7 @@
 
 * Download the source code
 * Install as a web service under IIS (make sure to use the .NET 4.0 App Pool)
-* Take note of the path you have registered (i.e. http://localhost:8080/ApiSampleApp is one possibility)
+* Take note of the path you have registered (i.e. http://localhost:8080/ApiSampleApp/Home/Trigger is one possibility. The "Home/Trigger" part is needed, but the "ApiSampleApp" and "8080" are up to you)
 * Use this URL to register a new application in the Developer Portal
 * Edit the Web.config and set:
     * MyRedirectUri to the above URL
