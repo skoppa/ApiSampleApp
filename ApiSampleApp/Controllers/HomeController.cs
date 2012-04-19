@@ -217,16 +217,17 @@ namespace ApiSampleApp.Controllers
 			// we got the authorization code, now we need an access token
 			var payload = new Dictionary<string, string>
 			{
-				{"client_id", ConfigurationManager.AppSettings["MyClientId"]}, 
 				{"redirect_uri", ConfigurationManager.AppSettings["MyRedirectUri"]},
 				{"grant_type", "authorization_code" },
-				{"code", code },
-				{"client_secret", ConfigurationManager.AppSettings["MyClientSecret"] }
+				{"code", code }
 			};
 			var oauthUri = ConfigurationManager.AppSettings["OauthTokenUri"];
 			// turn all my arguments into query parameters
 			var args = from kvp in payload select kvp.Key + "=" + kvp.Value;
 			var request = WebRequest.Create(oauthUri + "?" + string.Join("&", args));
+			SetBasicAuthHeader(request, ConfigurationManager.AppSettings["MyClientId"],
+					ConfigurationManager.AppSettings["MyClientSecret"]);
+				
 
 			// Do a POST request to get the authorization code
 			request.ContentType = "application/x-www-form-urlencoded";
