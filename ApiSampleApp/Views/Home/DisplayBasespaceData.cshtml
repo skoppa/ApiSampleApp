@@ -42,6 +42,7 @@
 	<td>Name</td>
 	<td>Samples</td>
 	<td>Analyses</td>
+	<td>Actions</td>
 	</tr>
 	</thead>
 	<tbody>
@@ -50,6 +51,16 @@
 	 <td>@project.Name</td>
 	 <td><a href="#" class="resource">@project.HrefSamples</a></td>
 	 <td><a href="#" class="resource">@project.HrefAnalyses</a></td>
+	 <td>@Html.ActionLink("Create New Analysis", 
+						"CreateAnalysis", 
+						"Home", 
+						new 
+						{
+							userId=Model.UserId, 
+							stateKey=Model.Key,
+							projectId=project.Id 
+						}, null)
+	</td>
 	}
 	</tbody>
 	</table>
@@ -69,11 +80,11 @@
 	</thead>
 	<tbody>
 	@foreach (var analysis in Model.Analyses)
-	{
+ {
 	 <td>@analysis.Name</td>
 	 <td>@analysis.Description</td>
 	 <td><a href="#" class="resource">@analysis.HrefResults</a></td>
-	}
+ }
 	</tbody>
 	</table>
 	</div>

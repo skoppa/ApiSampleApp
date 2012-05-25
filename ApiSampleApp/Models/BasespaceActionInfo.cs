@@ -12,6 +12,7 @@ namespace ApiSampleApp.Models
 	/// </summary>
 	public class BasespaceActionInfo
 	{
+		public string Key { get; set; }
 		public string UserId { get; set; }
 		public List<BasespaceSample> Samples { get; private set; }
 		public List<BasespaceAnalysis> Analyses { get; private set; }
@@ -69,6 +70,7 @@ namespace ApiSampleApp.Models
 				needed.AddRange(from p in Projects select "read project " + p.Id);
 			return string.Join(",", needed);
 		}
+
 	}
 	
 	public class BasespaceUser

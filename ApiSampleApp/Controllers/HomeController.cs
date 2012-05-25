@@ -105,18 +105,13 @@ namespace ApiSampleApp.Controllers
 						var userId = model.UserId;
 
 						var stateInfo = GetUserStateInfo(userId);
+						var stateId = stateInfo.AddStateInfo(model);
+							
 						// do we have an authorization code for this user yet? If not, we need to get it
 						// redirect the browser
 						if (string.IsNullOrEmpty(stateInfo.AuthToken))
 						{
-							var stateId = stateInfo.AddStateInfo(model);
-							var oauthUrl = string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code&state={3}&scope={4}",
-								ConfigurationManager.AppSettings["OauthUri"],
-								ConfigurationManager.AppSettings["MyClientId"],
-								ConfigurationManager.AppSettings["MyRedirectUri"],
-								userId + ":" + stateId,
-								model.GetRequestedScope()
-								);
+							var oauthUrl = BuildOAuthUrl(userId, stateId, null, model.GetRequestedScope());
 							
 							return Redirect(oauthUrl);
 						}
@@ -132,6 +127,18 @@ namespace ApiSampleApp.Controllers
 			return View("ShowRawText");
 		}
 
+		private string BuildOAuthUrl(string userId, string stateId, string actionState, string scope)
+		{
+			return string.Format("{0}?client_id={1}&redirect_uri={2}&response_type=code&state={3}{4}&scope={5}",
+								ConfigurationManager.AppSettings["OauthUri"],
+								ConfigurationManager.AppSettings["MyClientId"],
+								ConfigurationManager.AppSettings["MyRedirectUri"],
+								userId + ":" + stateId,
+								actionState == null ? string.Empty : ":" + actionState,
+								scope
+								);
+		}
+
 		/// <summary>
 		/// Simple helper method to deserialize into a dictionary. 
 		/// </summary>
@@ -145,10 +152,8 @@ namespace ApiSampleApp.Controllers
 
 		/// <summary>
 		/// A simple cache of information about each user. In a real application, this would be in 
-		/// a persistent database
+		/// a real database
 		/// </summary>
-		/// <param name="userId"></param>
-		/// <returns></returns>
 		UserStateInfo GetUserStateInfo(string userId)
 		{
 			Dictionary<string, UserStateInfo> stateCache;
@@ -173,7 +178,7 @@ namespace ApiSampleApp.Controllers
 		}
 
 		/// <summary>
-		/// This is the routine that fetches a resource from BaseSpace. This should show you
+		/// This is the routine that fetches a resource from BaseSpace. It demonstrates 
 		/// how to add the OAuth authorization token to the request so you can act on behalf of
 		/// the user
 		/// </summary>
@@ -196,6 +201,142 @@ namespace ApiSampleApp.Controllers
 			{
 				return new ContentResult { Content = stm.ReadToEnd(), ContentType = "application/json" };
 			}
+		}
+		
+		/// <summary>
+		/// Create a new analysis
+		/// </summary>
+		/// <returns>The ID of the analysis</returns>
+		string PostNewAnalysis(string userId, string projectId, string name, string description)
+		{
+			var userStateInfo = GetUserStateInfo(userId);
+			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
+				throw new ApplicationException("No authorization token");
+			var uri = string.Format("{0}v1pre1/projects/{1}/analyses?Name={2}&Description={3}",
+					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					projectId,	name, description);
+
+			var request = WebRequest.Create(uri);
+			request.Headers["Authorization"] = "Bearer " + userStateInfo.AuthToken;
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.ContentLength = 0;
+			request.Method = "POST";
+			var response = (HttpWebResponse)request.GetResponse();
+
+			dynamic responseData;
+			using (var stm = new StreamReader(response.GetResponseStream()))
+			{
+				responseData = DeserializeResponse(stm);
+			}
+
+			if (response.StatusCode != HttpStatusCode.Created)
+				throw new ApplicationException("Creation failed: " + responseData["ResponseStatus"]["ErrorCode"]);
+			return responseData["Response"]["Id"];
+		}
+
+		/// <summary>
+		/// Create a file in an analysis
+		/// </summary>
+		/// <returns>The ID of the file</returns>
+		string PostNewFileToAnalysis(string userId, string analysisId, string name, string directory, 
+			string contentType, byte[] data)
+		{
+			var userStateInfo = GetUserStateInfo(userId);
+			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
+				throw new ApplicationException("No authorization token");
+			var uri = string.Format("{0}v1pre1/analyses/{1}/files?Name={2}&Directory={3}",
+					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					analysisId, name, directory);
+
+			
+			var request = WebRequest.Create(uri)as HttpWebRequest;
+			request.Headers["Authorization"] = "Bearer " + userStateInfo.AuthToken;
+			request.ContentType = contentType;
+			request.ContentLength = data.Length;
+			request.Method = "POST";
+			using (var stm = request.GetRequestStream())
+			{
+				stm.Write(data, 0, data.Length);
+			}
+			var response = (HttpWebResponse)request.GetResponse();
+
+			dynamic responseData;
+			using (var stm = new StreamReader(response.GetResponseStream()))
+			{
+				responseData = DeserializeResponse(stm);
+			}
+
+			if (response.StatusCode != HttpStatusCode.Created)
+				throw new ApplicationException("Creation failed: " + responseData["ResponseStatus"]["ErrorCode"]);
+			return responseData["Response"]["Id"];
+		}
+
+		/// <summary>
+		/// Create a file in an analysis
+		/// </summary>
+		/// <returns>The ID of the analysis</returns>
+		void SetAnalysisStatus(string userId, string analysisId, string status, string statusSummary, string statusDetails)
+		{
+			var userStateInfo = GetUserStateInfo(userId);
+			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
+				throw new ApplicationException("No authorization token");
+			var uri = string.Format("{0}v1pre1/analyses/{1}?Status={2}&StatusSummary={3}&StatusDetails={4}",
+					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					analysisId, status, 
+					HttpUtility.UrlEncode(statusSummary), 
+					HttpUtility.UrlEncode(statusDetails));
+
+
+			var request = WebRequest.Create(uri) as HttpWebRequest;
+			request.Headers["Authorization"] = "Bearer " + userStateInfo.AuthToken;
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.ContentLength = 0;
+			request.Method = "POST";
+			var response = (HttpWebResponse)request.GetResponse();
+
+			dynamic responseData;
+			using (var stm = new StreamReader(response.GetResponseStream()))
+			{
+				responseData = DeserializeResponse(stm);
+			}
+
+			if (response.StatusCode != HttpStatusCode.OK)
+				throw new ApplicationException("Creation failed: " + responseData["ResponseStatus"]["ErrorCode"]);
+		}
+
+
+
+		public ActionResult CreateAnalysis(string userId, string stateKey, string projectId)
+		{
+			// to create something in a project, we need write access to that project
+			// request that here
+			var stateInfo = GetUserStateInfo(userId);
+			var model = stateInfo.GetStateInfo(stateKey);
+			Func<ActionResult> continuation = () =>
+				{
+					// this will be called after we have been granted the permission to create
+					// the analysis
+					try
+					{
+						var analysisName = "New Analysis " + DateTime.Now;
+
+						var id = PostNewAnalysis(userId, projectId, analysisName, "A dummy analysis");
+						var fileId = PostNewFileToAnalysis(userId, id, "foo.txt", "a/b/c", "text/plain; charset=utf-8", 
+							System.Text.Encoding.UTF8.GetBytes ("Howdy, folks!"));
+						SetAnalysisStatus(userId, id, "Completed", "It's ready", "I'm all done with it");
+					}
+					catch (Exception ex)
+					{
+						ViewBag.Message = string.Format("Error creating analysis/posting file: {0}", ex);
+						return View("ShowRawText");
+					}
+					return MainApplicationHandler(stateInfo, model);
+				};
+			var actionKey = stateInfo.AddPendingAction(continuation);
+			var oauthUrl = BuildOAuthUrl(userId, stateKey, actionKey, "write project " + projectId);
+
+			return Redirect(oauthUrl);
+			
 		}
 
 		/// <summary>
@@ -244,18 +385,30 @@ namespace ApiSampleApp.Controllers
 			{
 				dynamic dict = DeserializeResponse(stm);
 
-				// my state is userid:stateId - split them back apart
-				var user = state.Split(':')[0];
-				var stateId = state.Split(':')[1];
+				// my state is userid:stateId[:resumeKey] - split them back apart
+				var parts = state.Split(':');
+				var user = parts[0];
+				var stateId = parts[1];
 				var stateInfo = GetUserStateInfo(user);
 
 				stateInfo.AuthToken = dict["access_token"] as string;
 
-				// now that authorization is done, I can erase the state info
-				var context = stateInfo.GetAndDeleteStateInfo(stateId);
 
-				// now that authorization is compl;ete, we can act on the user's behalf.
-				return MainApplicationHandler(stateInfo, context);
+				if (parts.Length > 2)
+				{
+					// I have stored a pending action (I was creating an analysis)
+					// resume that work from here
+					var resume = stateInfo.GetPendingAction(parts[2]);
+					if (resume != null)
+						return resume() as ActionResult;
+				}
+
+				// now that authorization is complete, we can act on the user's behalf.
+				// look up the stored information about their original request and display
+				// the main page
+				var model = stateInfo.GetStateInfo(stateId);
+
+				return MainApplicationHandler(stateInfo, model);
 			}
 		}
 	}
