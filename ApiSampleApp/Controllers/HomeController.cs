@@ -192,6 +192,7 @@ namespace ApiSampleApp.Controllers
 			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
 				return new ContentResult { Content = "Invalid auth token" };
 			var uri = ConfigurationManager.AppSettings["BasespaceAppServerUri"] + resource;
+			uri = uri + (uri.Contains('?') ? "&" : "?") + "Limit=50";
 			var request = WebRequest.Create(uri);
 			request.Headers["Authorization"] = "Bearer " + userStateInfo.AuthToken;
 			var response = (HttpWebResponse)request.GetResponse();
@@ -212,8 +213,9 @@ namespace ApiSampleApp.Controllers
 			var userStateInfo = GetUserStateInfo(userId);
 			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
 				throw new ApplicationException("No authorization token");
-			var uri = string.Format("{0}v1pre1/projects/{1}/analyses?Name={2}&Description={3}",
+			var uri = string.Format("{0}{1}/projects/{2}/analyses?Name={3}&Description={4}",
 					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					ConfigurationManager.AppSettings["ApiVersionPrefix"],
 					projectId,	name, description);
 
 			var request = WebRequest.Create(uri);
@@ -244,8 +246,9 @@ namespace ApiSampleApp.Controllers
 			var userStateInfo = GetUserStateInfo(userId);
 			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
 				throw new ApplicationException("No authorization token");
-			var uri = string.Format("{0}v1pre1/analyses/{1}/files?Name={2}&Directory={3}",
+			var uri = string.Format("{0}{1}/analyses/{2}/files?Name={3}&Directory={4}",
 					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					ConfigurationManager.AppSettings["ApiVersionPrefix"],
 					analysisId, name, directory);
 
 			
@@ -280,8 +283,9 @@ namespace ApiSampleApp.Controllers
 			var userStateInfo = GetUserStateInfo(userId);
 			if (string.IsNullOrEmpty(userStateInfo.AuthToken))
 				throw new ApplicationException("No authorization token");
-			var uri = string.Format("{0}v1pre1/analyses/{1}?Status={2}&StatusSummary={3}&StatusDetails={4}",
+			var uri = string.Format("{0}{1}/analyses/{2}?Status={3}&StatusSummary={4}&StatusDetails={5}",
 					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
+					ConfigurationManager.AppSettings["ApiVersionPrefix"],
 					analysisId, status, 
 					HttpUtility.UrlEncode(statusSummary), 
 					HttpUtility.UrlEncode(statusDetails));
