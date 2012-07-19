@@ -216,24 +216,40 @@ namespace ApiSampleApp.Controllers
 			var uri = string.Format("{0}{1}/projects/{2}/analyses?Name={3}&Description={4}",
 					ConfigurationManager.AppSettings["BasespaceAppServerUri"],
 					ConfigurationManager.AppSettings["ApiVersionPrefix"],
-					projectId,	name, description);
+					projectId,	HttpUtility.UrlEncode(name), HttpUtility.UrlEncode(description));
 
 			var request = WebRequest.Create(uri);
 			request.Headers["Authorization"] = "Bearer " + userStateInfo.AuthToken;
 			request.ContentType = "application/x-www-form-urlencoded";
 			request.ContentLength = 0;
 			request.Method = "POST";
-			var response = (HttpWebResponse)request.GetResponse();
-
-			dynamic responseData;
-			using (var stm = new StreamReader(response.GetResponseStream()))
+			try
 			{
-				responseData = DeserializeResponse(stm);
-			}
+				var response = (HttpWebResponse)request.GetResponse();
 
-			if (response.StatusCode != HttpStatusCode.Created)
-				throw new ApplicationException("Creation failed: " + responseData["ResponseStatus"]["ErrorCode"]);
-			return responseData["Response"]["Id"];
+				dynamic responseData;
+				using (var stm = new StreamReader(response.GetResponseStream()))
+				{
+					responseData = DeserializeResponse(stm);
+				}
+
+				if (response.StatusCode != HttpStatusCode.Created)
+					throw new ApplicationException("Creation failed: " + responseData["ResponseStatus"]["ErrorCode"]);
+				return responseData["Response"]["Id"];
+			}
+			catch (WebException wex)
+			{
+				string x;
+				if (wex.Response != null && wex.Response.ContentLength > 0)
+				{
+					using (var stm = new StreamReader(wex.Response.GetResponseStream()))
+					{
+						x = stm.ReadToEnd();
+					}
+				}
+				throw;
+			}
+				
 		}
 
 		/// <summary>
