@@ -1,5 +1,9 @@
-# Getting Started
+# Prerequisites: 
+* Visual Studio 2010 (solution was created using this version)
+* MVC3 - downloadable from http://www.asp.net/mvc/mvc3
+* .NET 4.0
 
+# Getting Started
 * Download the source code
 * Install as a web service under IIS (make sure to use the .NET 4.0 App Pool)
 * Take note of the path you have registered (i.e. http://localhost:8080/ApiSampleApp is one possibility)
